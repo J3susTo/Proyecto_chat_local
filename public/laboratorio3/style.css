@@ -1,0 +1,49 @@
+body {
+    font-family: sans-serif;
+    padding: 20px;
+}
+
+#login {
+    margin-bottom: 20px;
+}
+
+#nickname {
+    padding: 8px;
+    width: 200px;
+}
+
+#start {
+    padding: 8px 12px;
+    margin-left: 8px;
+}
+
+#chat {
+    display: none;
+}
+
+#messages {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+
+#messages li {
+    background:
+        #e0e0e0;
+    margin-bottom: 5px;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+#input {
+    padding: 8px;
+    width: 300px;
+}
+
+button {
+    padding: 8px;
+}
