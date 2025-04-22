@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Laboratorio 5 - Usuarios conectados</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+
+    #chat {
+      margin-top: 20px;
+    }
+
+    #messages {
+      list-style: none;
+      padding-left: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+
+    #messages li {
+      padding: 5px 10px;
+      background-color: #e9ecef;
+      border-radius: 5px;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="card-title text-center mb-4">Chat con usuarios de sistemas</h2>
+
+            <div id="login" class="text-center mb-3">
+              <div class="mb-3">
+                <input id="nickname" class="form-control" placeholder="Tu nick" />
+              </div>
+              <button id="start" class="btn btn-primary w-100">Entrar al chat</button>
+            </div>
+
+            <div id="chat" style="display: none;">
+              <div id="usuarios" class="mb-3">
+                <h5>Usuarios conectados:</h5>
+                <ul id="lista-usuarios" class="list-group mb-3"></ul>
+              </div>
+
+              <ul id="messages" class="mb-3"></ul>
+
+<!--🔧 Se añadió un poco de espacio debajo (mb-2) para mejor diseño y se insertó el campo de imagen en medio del input y el botón.-->
+              <form id="form" class="input-group mb-2">
+                <input id="input" class="form-control" autocomplete="off" placeholder="Escribe un mensaje..." />
+                <!--🔧 Esto permite a los usuarios seleccionar imágenes desde su dispositivo.-->
+                <input type="file" id="imageInput" accept="image/*" class="form-control" />
+                <button type="submit" class="btn btn-success">Enviar</button>
+              </form>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+
+  <script>
+    const socket = io();
+    let nick = "";
+
+    const login = document.getElementById("login");
+    const chat = document.getElementById("chat");
+    const nicknameInput = document.getElementById("nickname");
+    const start = document.getElementById("start");
+
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+    const messages = document.getElementById("messages");
+    const imageInput = document.getElementById("imageInput");
+
+    // Sonidos
+    const sonidoIngreso = new Audio('./audio/ingreso.mp3');
+    const sonidoMensaje = new Audio('./audio/mensaje.mp3');
+
+    socket.on("imagen", (data) => {
+      const mensaje = `${data.nick} ha enviado una imagen:`;
+      console.log('🖼 Imagen enviada por', data.nick);
+
+      mensajes.push({ tipo: 'imagen', mensaje, imagen: data.image });
+
+      if (mensajes.length > 20) mensajes.shift();
+
+      io.emit("Chat message", { tipo: 'imagen', mensaje, imagen: data.image });
+    });
+
+
+    start.addEventListener("click", () => {
+      const value = nicknameInput.value.trim();
+      if (value) {
+        nick = value;
+        login.style.display = 'none';
+        chat.style.display = 'block';
+        socket.emit("nuevo usuario", nick);
+
+        // Reproducir sonido de ingreso
+        sonidoIngreso.play();
+      }
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (input.value) {
+        socket.emit("Chat message", `${nick}: ${input.value}`);
+        input.value = '';
+
+        // Reproducir sonido de mensaje enviado
+        sonidoMensaje.play();
+      }
+    });
+
+    socket.on("Chat message", (messageData) => {
+      if (Array.isArray(messageData)) {
+        messages.innerHTML = '';
+        messageData.forEach((m) => appendMessage(m));
+      } else {
+        appendMessage(messageData);
+      }
+    });
+
+    function appendMessage(data) {
+      const li = document.createElement("li");
+
+      if (typeof data === 'string') {
+        li.textContent = data;
+      } else if (data.tipo === 'imagen') {
+        li.innerHTML = `
+      <strong>${data.mensaje}</strong><br>
+      <img src="${data.imagen}" alt="Imagen enviada" style="max-width: 100%; border-radius: 8px; margin-top: 5px;">
+    `;
+      }
+
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+
+    socket.on("lista usuarios", (usuarios) => {
+      const lista = document.getElementById("lista-usuarios");
+      lista.innerHTML = "";
+      usuarios.forEach((usuario) => {
+        const li = document.createElement("li");
+        li.className = "list-group-item";
+        li.textContent = usuario;
+        lista.appendChild(li);
+      });
+    });
+
+    //🔧 Este fragmento lee la imagen como base64, la empaqueta con el nick del usuario y la envía al servidor vía socket
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      const file = imageInput.files[0];
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const imageData = e.target.result;
+          socket.emit("imagen", {
+            nick,
+            image: imageData
+          });
+        };
+        reader.readAsDataURL(file);
+        imageInput.value = ""; // Limpiar input de imagen
+      }
+
+      if (text) {
+        socket.emit("Chat message", `${nick}: ${text}`);
+        input.value = '';
+        sonidoMensaje.play();
+      }
+    });
+  </script>
+
+</body>
+
+</html>

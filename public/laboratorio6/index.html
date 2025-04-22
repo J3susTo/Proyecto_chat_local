@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Laboratorio 5 - Mensajes del sistema</title>
+</head>
+
+<body>
+    <div class="container"
+        style="margin: auto; width: 28%; padding: 20px; background: rgb(238, 235, 235); border-radius: 5px;">
+
+        <h2 style="margin: 20px auto;">Chat con mensajes del sistema</h2>
+
+        <div id="login" style="margin: 20px 28px;">
+            <input id="nickname" placeholder="tu nick">
+            <button id="start">Entrar</button>
+        </div>
+
+        <!----Area del chat inicialmente oculta-->
+        <div id="chat" style="display: none;">
+            <div id="usuarios" style="margin: auto; padding-bottom: 10px; box-shadow: black;">
+                <h3>Usuarios conectados:</h3>
+                <ul id="lista-usuarios"></ul>
+            </div>
+
+            <ul id="messages"></ul>
+
+            <form id="form">
+                <input id="input" placeholder="Escribe un mensaje">
+                <button type="submit">Enviar</button>
+            </form>
+        </div>
+    </div>
+    <audio id="notify-sound" src="http://197.168.11.12:3000/sonido.mp3"></audio>
+    <audio id="notify-sound" src="http://localhost:3000/sonido.mp3"></audio>
+</body>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+    const socket = io();
+    let nick = "";
+
+    // Referencias a los elementos HTML
+    const login = document.getElementById("login");
+    const chat = document.getElementById("chat");
+    const nicknameInput = document.getElementById("nickname"); // Fix: Correct ID reference
+    const start = document.getElementById("start");
+
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const messages = document.getElementById('messages');
+    const listaUsuarios = document.getElementById('lista-usuarios');
+    const sound = document.getElementById('notify-sound');
+
+    // Fix: Correct the event listener for the start button
+    start.addEventListener('click', () => {
+        const value = nicknameInput.value.trim(); // Fix: Access the value property
+        if (value) {
+            nick = value;
+            login.style.display = 'none';
+            chat.style.display = 'block'; // Fix: Correct 'dissplay' to 'display'
+            socket.emit('nuevo usuario', nick);
+        }
+    });
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (input.value.trim()) {
+            socket.emit('chat message', `${nick}: ${input.value}`);
+            input.value = '';
+        }
+    });
+
+    socket.on('chat message', (msg) => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        messages.appendChild(li);
+        sound.play();
+    });
+
+    socket.on('mensaje sistema', (msg) => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        li.style.fontStyle = 'italic';
+        li.style.color = 'gray';
+        messages.appendChild(li);
+    });
+
+    socket.on('usuarios conectados', function (usuarios) {
+        listaUsuarios.innerHTML = '';
+        usuarios.forEach((usuario) => {
+            const li = document.createElement('li');
+            li.textContent = usuario;
+            listaUsuarios.appendChild(li);
+        });
+
+    });
+</script>
+
+</html>
